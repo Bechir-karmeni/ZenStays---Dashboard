@@ -10,7 +10,6 @@ function SignUpPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Change this to your backend URL or use an env var
   const API_BASE = "http://localhost:8000";
 
   const [formData, setFormData] = useState({
@@ -19,7 +18,6 @@ function SignUpPage() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    department: "",
   });
 
   const handleInputChange = (e) => {
@@ -49,7 +47,6 @@ function SignUpPage() {
 
     setIsSubmitting(true);
     try {
-      // 1) Create account (HR self-signup)
       const res = await fetch(`${API_BASE}/api/auth/signup/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,7 +55,6 @@ function SignUpPage() {
           password: formData.password,
           first_name: formData.firstName,
           last_name: formData.lastName,
-          department: formData.department,
         }),
       });
 
@@ -69,11 +65,10 @@ function SignUpPage() {
             Object.values(err || {})
               .flat()
               .join(" ") ||
-            "Signup failed"
+            "Signup failed",
         );
       }
 
-      // 2) Auto-login to get JWT tokens
       const loginRes = await fetch(`${API_BASE}/api/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,7 +84,6 @@ function SignUpPage() {
       localStorage.setItem("access", tokens.access);
       localStorage.setItem("refresh", tokens.refresh);
 
-      // 3) (Optional) fetch /me to store profile locally
       try {
         const meRes = await fetch(`${API_BASE}/api/auth/me/`, {
           headers: { Authorization: `Bearer ${tokens.access}` },
@@ -184,28 +178,6 @@ function SignUpPage() {
                 Email Adress
               </label>
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Department</label>
-            <select
-              name="department"
-              value={formData.department}
-              onChange={handleInputChange}
-              className="form-select"
-              required
-            >
-              <option value="">Select your department</option>
-              <option value="engineering">Engineering</option>
-              <option value="marketing">Marketing</option>
-              <option value="sales">Sales</option>
-              <option value="hr">Human Resources</option>
-              <option value="finance">Finance</option>
-              <option value="operations">Operations</option>
-              <option value="design">Design</option>
-              <option value="product">Product</option>
-              <option value="other">Other</option>
-            </select>
           </div>
 
           <div className="form-group password-group">

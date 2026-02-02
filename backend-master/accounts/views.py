@@ -1,57 +1,41 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
 from django.contrib.auth import get_user_model
 from .serializers import (
-    SignupSerializer, InviteCreateSerializer, AcceptInviteSerializer, UserMeSerializer
+    SignupSerializer, InviteCreateSerializer, AcceptInviteSerializer, UserMeSerializer, UserListSerializer
 )
 
 User = get_user_model()
 
+class IsHR(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and getattr(request.user, "role", "") == User.Roles.HR
+
 class SignupView(generics.CreateAPIView):
-    """
-    Public endpoint: HR self-signup (your current form).
-    """
     serializer_class = SignupSerializer
     permission_classes = [permissions.AllowAny]
 
 class InviteCreateView(generics.CreateAPIView):
-    """
-    HR-only: create an invite for an Employee.
-    """
     serializer_class = InviteCreateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 class AcceptInviteView(generics.CreateAPIView):
-    """
-    Public: employee completes account with token + password.
-    """
     serializer_class = AcceptInviteSerializer
     permission_classes = [permissions.AllowAny]
 
 class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    ### this for show
+
     def get(self, request):
         return Response(UserMeSerializer(request.user).data)
-    ### this for update 
+
     def patch(self, request):
         serializer = UserMeSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-from rest_framework import generics, permissions
-from .serializers import UserListSerializer
-
-class IsHR(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, "role", "") == User.Roles.HR
 
 class UsersListView(generics.ListAPIView):
     serializer_class = UserListSerializer
@@ -59,3 +43,18 @@ class UsersListView(generics.ListAPIView):
 
     def get_queryset(self):
         return User.objects.all().order_by("-date_joined")
+
+# ADD THIS NEW VIEW
+class UserDeleteView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsHR]
+    queryset = User.objects.all()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.id == request.user.id:
+            return Response(
+                {"error": "You cannot delete your own account."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)

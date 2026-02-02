@@ -19,7 +19,6 @@ INSTALLED_APPS = [
     "corsheaders",
     # local
     "accounts",
-    "assessments",
 ]
 
 
@@ -74,7 +73,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
 }
 
-from datetime import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),

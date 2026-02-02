@@ -103,26 +103,25 @@ class UserMeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-                    "id",
-                    "email",
-                    "first_name",
-                    "last_name",
-                    "role",
-                    "department",
-                    "phone",
-                    "location",
-                    "bio",
-                    "join_date",
-                    "gender",
-                    "date_of_birth",
-                    "nationality",
-                    "marital_status",
-                ]
-from assessments.models import Assignment
-class UserListSerializer(serializers.ModelSerializer):
-    last_assessment = serializers.SerializerMethodField()
-    latest_risk = serializers.SerializerMethodField()
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "department",
+            "phone",
+            "location",
+            "bio",
+            "join_date",
+            "gender",
+            "date_of_birth",
+            "nationality",
+            "marital_status",
+        ]
 
+
+# ---------- User list for HR ----------
+class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
@@ -133,64 +132,5 @@ class UserListSerializer(serializers.ModelSerializer):
             "role",
             "department",
             "is_active",
-            "last_assessment",
-            "latest_risk",
+            "date_joined",
         ]
-
-    def get_last_assessment(self, obj):
-        qs = getattr(obj, "assignments", None)
-        if not qs:
-            return None
-        latest = qs.filter(status=Assignment.Status.COMPLETED).order_by("-completed_at").first()
-        return latest.completed_at.isoformat() if (latest and latest.completed_at) else None
-
-    def get_latest_risk(self, obj):
-        qs = getattr(obj, "assignments", None)
-        if not qs:
-            return 0
-
-        # Prefer the most recently COMPLETED assignment
-        a = qs.filter(status=Assignment.Status.COMPLETED).order_by("-completed_at").first() or \
-            qs.order_by("-assigned_at").first()
-        if not a:
-            return 0
-
-        metrics = getattr(a, "metrics", None)
-        if isinstance(metrics, dict):
-            # 1) explicit numeric risk if provided
-            risk = metrics.get("risk", None)
-            if isinstance(risk, (int, float)):
-                return int(risk)
-
-            # 2) derive a coarse risk from Karasek quadrant if present
-            quadrant = metrics.get("quadrant")
-            if isinstance(quadrant, str):
-                mapping = {
-                    "highStrain": 80,
-                    "active": 50,
-                    "passive": 40,
-                    "lowStrain": 20,
-                }
-                return int(mapping.get(quadrant, 0))
-
-            # 3) optional: simple heuristics from dims (D/C)
-            dims = metrics.get("dim")
-            if isinstance(dims, dict):
-                d = dims.get("D", 0)
-                c = dims.get("C", 0)
-                # high demand + low control → higher risk
-                if d >= 60 and c < 60:
-                    return 70
-                if d >= 60 and c >= 60:
-                    return 50
-                if d < 60 and c < 60:
-                    return 40
-                return 25
-
-            # 4) optional: Maslach-like stub (exhaustion drives risk)
-            burnout = metrics.get("burnout")
-            if isinstance(burnout, dict):
-                exh = burnout.get("exhaustion", 0)
-                return int(exh) if isinstance(exh, (int, float)) else 0
-
-        return 0
