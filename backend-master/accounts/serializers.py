@@ -37,18 +37,21 @@ class AcceptInviteSerializer(serializers.Serializer):
     def validate(self, attrs):
         raw = (attrs.get("token") or "").strip()
 
+        if not raw:
+            raise serializers.ValidationError({"detail": "Missing invite token."})
+
         try:
             tok = str(UUID(raw))
         except ValueError:
-            raise serializers.ValidationError({"token": "Invalid token format."})
+            raise serializers.ValidationError({"detail": "Invalid token format."})
 
         try:
             invite = Invite.objects.get(id=tok)
         except Invite.DoesNotExist:
-            raise serializers.ValidationError({"token": "Invite not found."})
+            raise serializers.ValidationError({"detail": "Invite not found."})
 
         if invite.is_accepted:
-            raise serializers.ValidationError({"token": "Invite already used."})
+            raise serializers.ValidationError({"detail": "This invite has already been used."})
 
         attrs["invite"] = invite
         return attrs
