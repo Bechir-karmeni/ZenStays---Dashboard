@@ -11,17 +11,10 @@ function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
 
-  // Use env var if provided, else default to localhost:8000
   const API_BASE = "http://localhost:8000";
 
   const handleInputChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  // Email format validation
-  const isValidEmail = (email) => {
-    const regex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/i;
-    return regex.test(email);
   };
 
   const handleLogin = async (e) => {
@@ -38,7 +31,6 @@ function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      // 1) Login
       const res = await fetch(`${API_BASE}/api/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,13 +42,12 @@ function LoginPage() {
         throw new Error(err?.detail || "Login failed");
       }
 
-      const tokens = await res.json(); // { access, refresh }
+      const tokens = await res.json();
       localStorage.setItem("access", tokens.access);
       localStorage.setItem("refresh", tokens.refresh);
       localStorage.setItem("authenticated", "true");
 
-      // 2) Fetch user profile
-      let role = "EMPLOYEE"; // fallback
+      let role = "CLIENT";
       try {
         const meRes = await fetch(`${API_BASE}/api/auth/me/`, {
           headers: { Authorization: `Bearer ${tokens.access}` },
@@ -64,7 +55,7 @@ function LoginPage() {
         if (meRes.ok) {
           const me = await meRes.json();
           localStorage.setItem("me", JSON.stringify(me));
-          role = me.role || "EMPLOYEE"; // ⚡ pick role from backend
+          role = me.role || "CLIENT";
         }
       } catch {
         // ignore
@@ -72,8 +63,8 @@ function LoginPage() {
 
       toast.success("Signed in successfully!", { position: "top-right", theme: "colored" });
 
-      // 3) Redirect based on role
-      if (role === "HR") {
+      // Redirect based on role
+      if (role === "ADMIN" || role === "HR") {
         navigate("/dashboard");
       } else {
         navigate("/my-assessments");
@@ -97,10 +88,9 @@ function LoginPage() {
             <Heart className="auth-heart-icon" />
           </div>
           <h2 className="auth-title">Welcome Back</h2>
-          <p className="auth-subtitle">Sign in to continue your wellness journey</p>
+          <p className="auth-subtitle">Sign in to continue</p>
         </div>
 
-        {/* ✅ Form that submits on Enter key */}
         <form className="auth-form" onSubmit={handleLogin}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
@@ -158,15 +148,6 @@ function LoginPage() {
             {isSubmitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
-        <div className="auth-footer">
-          <p className="auth-switch-text">
-            Don't have an account?{" "}
-            <button onClick={() => navigate("/signup")} className="auth-switch-link" type="button">
-              Sign up here
-            </button>
-          </p>
-        </div>
 
         <button onClick={() => navigate("/")} className="back-home-btn" type="button">
           ← Back to Home

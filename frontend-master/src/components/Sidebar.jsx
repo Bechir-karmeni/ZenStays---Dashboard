@@ -3,26 +3,29 @@ import { Heart, Users, LogOut, User, Home, Calendar } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 
-const Sidebar = ({ userName = "MizouH", isOpen, toggleSidebar }) => {
+const Sidebar = ({ userName = "User", isOpen, toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   // Read role from localStorage (set at login in LoginPage)
   const storedUser = JSON.parse(localStorage.getItem("me") || "{}");
-  const role = storedUser.role || "EMPLOYEE"; // fallback if not logged
+  const role = storedUser.role || "CLIENT";
 
-  // HR menu (Admin)
-  const hrMenu = [
+  // Check if user is admin (supports both ADMIN and HR for backwards compatibility)
+  const isAdmin = role === "ADMIN" || role === "admin" || role === "HR" || role === "hr";
+
+  // Admin menu
+  const adminMenu = [
     { path: "/dashboard", label: "Dashboard", icon: Home },
     { path: "/employees", label: "Client Management", icon: Users },
     { path: "/scheduling", label: "Scheduling", icon: Calendar },
   ];
 
-  // Client menu (formerly Employee)
+  // Client menu
   const clientMenu = [{ path: "/my-assessments", label: "Dashboard", icon: Home }];
 
   // Pick menu based on role
-  const menuItems = role === "HR" ? hrMenu : clientMenu;
+  const menuItems = isAdmin ? adminMenu : clientMenu;
 
   const handleNavigation = (path) => navigate(path);
 
@@ -90,7 +93,7 @@ const Sidebar = ({ userName = "MizouH", isOpen, toggleSidebar }) => {
                   ? `${storedUser.first_name} ${storedUser.last_name || ""}`
                   : userName}
               </button>
-              <p className="profile-role">{role === "HR" ? "Administrator" : "Client"}</p>
+              <p className="profile-role">{isAdmin ? "Administrator" : "Client"}</p>
             </div>
           )}
           <button onClick={handleLogout} className="logout-btn" title="Logout">

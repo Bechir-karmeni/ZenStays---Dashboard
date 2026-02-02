@@ -175,13 +175,13 @@ const styles = {
     fontSize: "12px",
     fontWeight: "500",
   },
-  statusActive: {
+  roleAdmin: {
+    background: "#dbeafe",
+    color: "#1e40af",
+  },
+  roleClient: {
     background: "#dcfce7",
     color: "#166534",
-  },
-  statusInactive: {
-    background: "#fee2e2",
-    color: "#991b1b",
   },
   modal: {
     position: "fixed",
@@ -260,17 +260,18 @@ const styles = {
   },
 };
 
-// Badge Component
-function StatusBadge({ status }) {
-  const isActive = status === "Active";
+// Role Badge Component
+function RoleBadge({ role }) {
+  const isAdmin = role === "ADMIN" || role === "admin" || role === "HR";
+  const displayRole = isAdmin ? "Admin" : "Client";
   return (
     <span
       style={{
         ...styles.statusBadge,
-        ...(isActive ? styles.statusActive : styles.statusInactive),
+        ...(isAdmin ? styles.roleAdmin : styles.roleClient),
       }}
     >
-      {status}
+      {displayRole}
     </span>
   );
 }
@@ -306,7 +307,7 @@ export default function Employees() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [roleFilter, setRoleFilter] = useState("All");
 
   // Modals
   const [detailOpen, setDetailOpen] = useState(false);
@@ -335,7 +336,7 @@ export default function Employees() {
             id: String(u.id),
             name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.email,
             email: u.email,
-            status: u.is_active ? "Active" : "Inactive",
+            role: u.role,
           }));
           setRows(mapped);
         }
@@ -367,9 +368,8 @@ export default function Employees() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Failed to delete user");
+        throw new Error(data.error || data.detail || "Failed to delete user");
       }
-      // Remove from list
       setRows(rows.filter((r) => r.id !== deleteRow.id));
       setDeleteOpen(false);
       setDeleteRow(null);
@@ -407,17 +407,20 @@ export default function Employees() {
       !searchQuery ||
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === "All" || r.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchRole =
+      roleFilter === "All" ||
+      (roleFilter === "Admin" && (r.role === "ADMIN" || r.role === "HR")) ||
+      (roleFilter === "Client" && (r.role === "CLIENT" || r.role === "EMPLOYEE"));
+    return matchSearch && matchRole;
   });
 
   // Stats
   const stats = useMemo(
     () => ({
       total: rows.length,
-      active: rows.filter((r) => r.status === "Active").length,
+      clients: rows.filter((r) => r.role === "CLIENT" || r.role === "EMPLOYEE").length,
     }),
-    [rows]
+    [rows],
   );
 
   return (
@@ -433,16 +436,16 @@ export default function Employees() {
         <div style={styles.statCard}>
           <div style={styles.statLabel}>
             <Users size={18} color="#6b7280" />
-            Total Clients
+            Total Users
           </div>
           <div style={styles.statValue}>{stats.total}</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statLabel}>
             <UserCheck size={18} color="#10b981" />
-            Active Clients
+            Clients
           </div>
-          <div style={{ ...styles.statValue, color: "#10b981" }}>{stats.active}</div>
+          <div style={{ ...styles.statValue, color: "#10b981" }}>{stats.clients}</div>
         </div>
       </div>
 
@@ -460,12 +463,12 @@ export default function Employees() {
         </div>
         <select
           style={styles.select}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
         >
-          <option value="All">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
+          <option value="All">All Roles</option>
+          <option value="Admin">Admin</option>
+          <option value="Client">Client</option>
         </select>
         <button
           style={{ ...styles.button, ...styles.primaryButton }}
@@ -498,7 +501,7 @@ export default function Employees() {
               <tr>
                 <th style={styles.th}>Name</th>
                 <th style={styles.th}>Email</th>
-                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Role</th>
                 <th style={styles.th}>Actions</th>
               </tr>
             </thead>
@@ -508,7 +511,7 @@ export default function Employees() {
                   <td style={{ ...styles.td, fontWeight: "500", color: "#111827" }}>{r.name}</td>
                   <td style={styles.td}>{r.email}</td>
                   <td style={styles.td}>
-                    <StatusBadge status={r.status} />
+                    <RoleBadge role={r.role} />
                   </td>
                   <td style={styles.td}>
                     <button style={styles.actionButton} onClick={() => viewDetails(r)}>
@@ -548,8 +551,8 @@ export default function Employees() {
               <div style={{ color: "#374151" }}>{detailRow.email}</div>
             </div>
             <div style={styles.formGroup}>
-              <div style={styles.formLabel}>Status</div>
-              <StatusBadge status={detailRow.status} />
+              <div style={styles.formLabel}>Role</div>
+              <RoleBadge role={detailRow.role} />
             </div>
           </div>
         )}
